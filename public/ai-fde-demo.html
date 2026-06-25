@@ -1,0 +1,413 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>AI FDE 服务技术侧汇报</title>
+  <style>
+    :root {
+      --bg: #050816;
+      --panel: rgba(16, 24, 48, 0.72);
+      --panel-strong: rgba(23, 35, 70, 0.9);
+      --text: #f8fbff;
+      --muted: #9fb1d1;
+      --cyan: #34e7ff;
+      --blue: #5b7cfa;
+      --purple: #bd62ff;
+      --green: #52ffa8;
+      --orange: #ffb86b;
+      --danger: #ff5f8f;
+    }
+
+    * { box-sizing: border-box; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--text);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+      background:
+        radial-gradient(circle at 12% 10%, rgba(52, 231, 255, 0.22), transparent 34%),
+        radial-gradient(circle at 88% 18%, rgba(189, 98, 255, 0.24), transparent 34%),
+        radial-gradient(circle at 45% 90%, rgba(82, 255, 168, 0.13), transparent 28%),
+        linear-gradient(135deg, #040612 0%, #08122b 48%, #090517 100%);
+      overflow-x: hidden;
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      background-image:
+        linear-gradient(rgba(255,255,255,0.045) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.045) 1px, transparent 1px);
+      background-size: 54px 54px;
+      mask-image: linear-gradient(to bottom, rgba(0,0,0,0.9), transparent 88%);
+    }
+
+    .orb {
+      position: fixed;
+      width: 34vw;
+      aspect-ratio: 1;
+      border-radius: 999px;
+      filter: blur(72px);
+      opacity: 0.42;
+      pointer-events: none;
+      animation: float 12s ease-in-out infinite alternate;
+    }
+
+    .orb.one { left: -12vw; top: 8vh; background: var(--cyan); }
+    .orb.two { right: -14vw; top: 44vh; background: var(--purple); animation-delay: -4s; }
+    .orb.three { left: 38vw; bottom: -18vw; background: var(--green); animation-delay: -7s; }
+
+    @keyframes float {
+      from { transform: translate3d(0, 0, 0) scale(1); }
+      to { transform: translate3d(36px, -24px, 0) scale(1.08); }
+    }
+
+    .shell {
+      position: relative;
+      width: min(1180px, calc(100% - 40px));
+      margin: 0 auto;
+      padding: 28px 0 72px;
+    }
+
+    .nav {
+      position: sticky;
+      top: 16px;
+      z-index: 20;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 12px 16px;
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 999px;
+      background: rgba(5, 8, 22, 0.62);
+      box-shadow: 0 20px 80px rgba(0,0,0,0.28);
+      backdrop-filter: blur(18px);
+    }
+
+    .brand { display: flex; align-items: center; gap: 10px; font-weight: 800; letter-spacing: 0.04em; }
+    .brand-mark {
+      display: grid;
+      place-items: center;
+      width: 36px;
+      height: 36px;
+      border-radius: 12px;
+      background: linear-gradient(135deg, var(--cyan), var(--purple));
+      box-shadow: 0 0 28px rgba(52, 231, 255, 0.45);
+    }
+
+    .nav a {
+      color: var(--muted);
+      text-decoration: none;
+      margin-left: 18px;
+      font-size: 14px;
+    }
+    .nav a:hover { color: var(--text); }
+
+    .hero {
+      display: grid;
+      grid-template-columns: minmax(0, 1.1fr) minmax(360px, 0.9fr);
+      gap: 36px;
+      align-items: center;
+      min-height: calc(100vh - 90px);
+      padding: 72px 0 44px;
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 12px;
+      border: 1px solid rgba(52,231,255,0.32);
+      border-radius: 999px;
+      color: #d9fbff;
+      background: rgba(52,231,255,0.08);
+      box-shadow: inset 0 0 22px rgba(52,231,255,0.08);
+    }
+
+    .pulse-dot {
+      width: 9px;
+      height: 9px;
+      border-radius: 999px;
+      background: var(--green);
+      box-shadow: 0 0 0 0 rgba(82,255,168,0.8);
+      animation: pulse 1.8s infinite;
+    }
+
+    @keyframes pulse {
+      70% { box-shadow: 0 0 0 12px rgba(82,255,168,0); }
+      100% { box-shadow: 0 0 0 0 rgba(82,255,168,0); }
+    }
+
+    h1 {
+      margin: 24px 0 18px;
+      font-size: clamp(46px, 7vw, 92px);
+      line-height: 0.96;
+      letter-spacing: -0.07em;
+    }
+
+    .gradient-text {
+      background: linear-gradient(90deg, #fff 0%, var(--cyan) 32%, var(--purple) 66%, #fff 100%);
+      background-size: 220% auto;
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      animation: shine 5s linear infinite;
+    }
+
+    @keyframes shine { to { background-position: 220% center; } }
+
+    .lead {
+      max-width: 760px;
+      color: #c5d3ef;
+      font-size: clamp(18px, 2.1vw, 24px);
+      line-height: 1.7;
+    }
+
+    .cta-row { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 34px; }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 48px;
+      padding: 0 20px;
+      border: 1px solid rgba(255,255,255,0.16);
+      border-radius: 999px;
+      color: var(--text);
+      text-decoration: none;
+      background: rgba(255,255,255,0.07);
+      backdrop-filter: blur(12px);
+    }
+    .btn.primary {
+      border: 0;
+      color: #06111f;
+      font-weight: 800;
+      background: linear-gradient(135deg, var(--cyan), var(--green));
+      box-shadow: 0 18px 54px rgba(52,231,255,0.24);
+    }
+
+    .holo-card {
+      position: relative;
+      padding: 24px;
+      border: 1px solid rgba(255,255,255,0.16);
+      border-radius: 34px;
+      background: linear-gradient(180deg, rgba(255,255,255,0.12), rgba(255,255,255,0.05));
+      box-shadow: 0 30px 120px rgba(0,0,0,0.44), inset 0 1px 0 rgba(255,255,255,0.18);
+      overflow: hidden;
+      backdrop-filter: blur(22px);
+    }
+
+    .holo-card::before {
+      content: "";
+      position: absolute;
+      inset: -2px;
+      background: conic-gradient(from 180deg, transparent, rgba(52,231,255,0.48), rgba(189,98,255,0.42), transparent 62%);
+      opacity: 0.42;
+      animation: rotate 8s linear infinite;
+    }
+    .holo-card > * { position: relative; z-index: 1; }
+    @keyframes rotate { to { transform: rotate(1turn); } }
+
+    .terminal {
+      border-radius: 24px;
+      background: rgba(3, 8, 21, 0.86);
+      border: 1px solid rgba(255,255,255,0.1);
+      overflow: hidden;
+    }
+    .terminal-top { display: flex; gap: 8px; padding: 14px; border-bottom: 1px solid rgba(255,255,255,0.08); }
+    .dot { width: 11px; height: 11px; border-radius: 999px; }
+    .red { background: #ff6678; } .yellow { background: #ffd166; } .green { background: #52ffa8; }
+    .terminal-body { padding: 22px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; color: #c8f7ff; line-height: 1.9; }
+    .terminal-body b { color: var(--green); }
+
+    section { scroll-margin-top: 110px; margin-top: 34px; }
+    .section-head { display: flex; align-items: end; justify-content: space-between; gap: 24px; margin: 86px 0 26px; }
+    h2 { margin: 0; font-size: clamp(32px, 4vw, 56px); letter-spacing: -0.05em; }
+    .section-head p { max-width: 520px; margin: 0; color: var(--muted); line-height: 1.8; }
+
+    .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
+    .card {
+      min-height: 270px;
+      padding: 24px;
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 28px;
+      background: var(--panel);
+      box-shadow: 0 24px 90px rgba(0,0,0,0.24);
+      backdrop-filter: blur(16px);
+    }
+    .card h3 { margin: 16px 0 10px; font-size: 28px; }
+    .card p, .card li { color: #c4d1ec; line-height: 1.75; }
+    .icon {
+      display: grid;
+      place-items: center;
+      width: 52px;
+      height: 52px;
+      border-radius: 18px;
+      font-size: 26px;
+      background: linear-gradient(135deg, rgba(52,231,255,0.2), rgba(189,98,255,0.18));
+      border: 1px solid rgba(255,255,255,0.14);
+    }
+
+    .pipeline {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 14px;
+    }
+    .step {
+      position: relative;
+      padding: 20px;
+      min-height: 156px;
+      border-radius: 24px;
+      background: linear-gradient(180deg, rgba(255,255,255,0.1), rgba(255,255,255,0.045));
+      border: 1px solid rgba(255,255,255,0.11);
+    }
+    .step strong { display: block; color: var(--cyan); font-size: 13px; letter-spacing: 0.12em; text-transform: uppercase; }
+    .step span { display: block; margin-top: 10px; font-size: 20px; font-weight: 800; }
+    .step p { margin: 10px 0 0; color: var(--muted); line-height: 1.55; font-size: 14px; }
+
+    .value-wall {
+      display: grid;
+      grid-template-columns: 0.9fr 1.1fr;
+      gap: 18px;
+      align-items: stretch;
+    }
+    .big-number { font-size: clamp(72px, 12vw, 148px); line-height: 0.9; font-weight: 900; letter-spacing: -0.1em; color: transparent; -webkit-text-stroke: 1px rgba(255,255,255,0.42); }
+    .scenario-list { display: grid; gap: 14px; }
+    .scenario { display: flex; gap: 14px; align-items: start; padding: 18px; border-radius: 22px; background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.1); }
+    .scenario b { min-width: 54px; color: var(--green); }
+    .scenario span { color: #c5d3ef; line-height: 1.7; }
+
+    .closing {
+      margin-top: 92px;
+      padding: clamp(28px, 5vw, 56px);
+      border-radius: 36px;
+      text-align: center;
+      background: linear-gradient(135deg, rgba(52,231,255,0.18), rgba(189,98,255,0.18), rgba(82,255,168,0.11));
+      border: 1px solid rgba(255,255,255,0.18);
+      box-shadow: 0 35px 120px rgba(30, 83, 255, 0.22);
+    }
+    .closing h2 { max-width: 900px; margin: 0 auto 18px; }
+    .closing p { max-width: 820px; margin: 0 auto; color: #dce7ff; font-size: 20px; line-height: 1.8; }
+
+    @media (max-width: 940px) {
+      .hero, .value-wall { grid-template-columns: 1fr; }
+      .grid-3, .pipeline { grid-template-columns: 1fr; }
+      .nav-links { display: none; }
+      .section-head { display: block; }
+      .section-head p { margin-top: 14px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="orb one"></div>
+  <div class="orb two"></div>
+  <div class="orb three"></div>
+
+  <main class="shell">
+    <nav class="nav" aria-label="页面导航">
+      <div class="brand"><span class="brand-mark">AI</span><span>FDE DEMO</span></div>
+      <div class="nav-links">
+        <a href="#usable">可用</a>
+        <a href="#trusted">可信</a>
+        <a href="#delivery">可持续交付</a>
+        <a href="#value">客户价值</a>
+      </div>
+    </nav>
+
+    <header class="hero">
+      <div>
+        <div class="eyebrow"><span class="pulse-dot"></span> 5 分钟客户演示版 · 技术侧汇报</div>
+        <h1>让 AI 真正在<br><span class="gradient-text">客户业务中落地</span></h1>
+        <p class="lead">AI FDE 不是交付一个会聊天的工具，而是把客户的知识、流程、经验、案例和数据，变成可被 AI 调用、可被业务复用、可持续运营的服务能力。</p>
+        <div class="cta-row">
+          <a class="btn primary" href="#usable">开始演示</a>
+          <a class="btn" href="#closing">记住主线</a>
+        </div>
+      </div>
+      <aside class="holo-card" aria-label="演示摘要">
+        <div class="terminal">
+          <div class="terminal-top"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span></div>
+          <div class="terminal-body">
+            <div>&gt; customer.concerns()</div>
+            <div>01 <b>能不能解决真实业务问题？</b></div>
+            <div>02 <b>准不准、安不安全、能不能信任？</b></div>
+            <div>03 <b>上线后能否持续优化？</b></div>
+            <br>
+            <div>&gt; fde.answer()</div>
+            <div><b>可用 × 可信 × 可持续交付</b></div>
+          </div>
+        </div>
+      </aside>
+    </header>
+
+    <section id="usable">
+      <div class="section-head">
+        <h2>01 · 可用：先让 AI 理解客户业务</h2>
+        <p>第一步不是直接上大模型，而是把分散资料治理成 AI 能理解、能检索、能调用的企业知识资产。</p>
+      </div>
+      <div class="pipeline">
+        <div class="step"><strong>Clean</strong><span>文档清洗</span><p>过滤无效、重复、过期资料，保证知识源干净。</p></div>
+        <div class="step"><strong>Classify</strong><span>资料分类</span><p>产品、销售、案例、售后、交付方案分区管理。</p></div>
+        <div class="step"><strong>Chunk</strong><span>知识切片</span><p>长文档拆成适合检索的小知识块。</p></div>
+        <div class="step"><strong>Tag</strong><span>标签化</span><p>按行业、产品、场景、客户类型组织知识。</p></div>
+        <div class="step"><strong>Govern</strong><span>版本与权限</span><p>确保 AI 使用最新、正确、授权范围内的资料。</p></div>
+      </div>
+    </section>
+
+    <section id="trusted">
+      <div class="section-head">
+        <h2>02 · 可信：在可控边界内稳定输出</h2>
+        <p>客户怕的不是 AI 不够聪明，而是乱说、乱承诺、乱报价。可信交付的核心是稳、准、可控。</p>
+      </div>
+      <div class="grid-3">
+        <article class="card"><div class="icon">📚</div><h3>来源受控</h3><p>产品参数、报价规则、服务边界等关键内容，优先基于客户官方知识库，而不是模型泛化猜测。</p></article>
+        <article class="card"><div class="icon">🔎</div><h3>答案可追溯</h3><p>重要回答可关联产品文档、FAQ、案例库，便于客户内部审核与复盘。</p></article>
+        <article class="card"><div class="icon">🛡️</div><h3>权限与兜底</h3><p>不同角色看到不同内容；合同、折扣、法律风险、重大承诺由人工最终确认。</p></article>
+      </div>
+    </section>
+
+    <section id="delivery">
+      <div class="section-head">
+        <h2>03 · 可持续交付：上线只是开始</h2>
+        <p>AI 分身交付后进入持续运营周期：看数据、补知识、调提示词、优化工作流和工具调用。</p>
+      </div>
+      <div class="value-wall">
+        <div class="card">
+          <div class="big-number">∞</div>
+          <h3>持续运营闭环</h3>
+          <p>业务会变化、产品会更新、政策会调整。FDE 服务不是一次性功能交付，而是围绕业务效果持续迭代。</p>
+        </div>
+        <div class="scenario-list">
+          <div class="scenario"><b>高频问题</b><span>追踪客户最常问什么，找出最需要沉淀的标准答案。</span></div>
+          <div class="scenario"><b>命中缺口</b><span>识别 AI 经常答不上来的问题，补齐知识库和流程边界。</span></div>
+          <div class="scenario"><b>采纳反馈</b><span>分析哪些回答被采用、哪些需要人工修改，反向优化提示词与模板。</span></div>
+          <div class="scenario"><b>场景效率</b><span>持续评估方案生成、FAQ、会议纪要、销售话术、案例沉淀等价值场景。</span></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="value">
+      <div class="section-head">
+        <h2>面向客户的整体价值</h2>
+        <p>把客户业务中的知识流、信息流和工作流连接起来，形成组织级 AI 能力。</p>
+      </div>
+      <div class="grid-3">
+        <article class="card"><div class="icon">🧩</div><h3>统一知识资产</h3><p>将分散在 Word、Excel、协同工具和老员工经验里的资料，治理成统一知识体系。</p></article>
+        <article class="card"><div class="icon">🚀</div><h3>复用专家经验</h3><p>把优秀话术、项目案例、交付经验沉淀为可复制、可调用、可规模化的 AI 能力。</p></article>
+        <article class="card"><div class="icon">⚡</div><h3>提升业务效率</h3><p>服务销售、售前、客服、交付等环节，降低沟通成本，加速方案与响应产出。</p></article>
+      </div>
+    </section>
+
+    <section id="closing" class="closing">
+      <h2>不是卖 AI 工具，而是帮客户把知识、流程和经验变成可持续运营的 AI 能力。</h2>
+      <p>AI FDE 真正交付的，是一套持续复用客户知识、提升业务效率、降低沟通成本的服务体系。</p>
+    </section>
+  </main>
+</body>
+</html>
